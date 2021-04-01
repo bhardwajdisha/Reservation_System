@@ -1,0 +1,11 @@
+{
+    "services": {
+        "Delhi": {
+            "pathName": "Delhi",
+            "protocol": "http",
+            "host": "localhost",
+            "port": 3003,
+            "url": "http://localhost:3003/"
+        }
+    }
+}

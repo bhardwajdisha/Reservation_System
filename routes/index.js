@@ -5,8 +5,8 @@ const registry = require('./registry.json')
 const fs = require('fs')
 const loadbalancer = require('../util/loadbalancer');
 
-router.all('/:apiName/:path',(req,res)=>{
-    const service=registry.services[req.params.apiName]
+router.all('/:apiName/:path/:api',(req,res)=>{
+    const service = registry.services[req.params.apiName]
     if(service)
     {
         if(!service.loadbalancerStratergy){
@@ -22,7 +22,7 @@ router.all('/:apiName/:path',(req,res)=>{
         console.log(url);
         axios({
             method : req.method,
-            url : url+req.params.path,
+            url : url+req.params.path + "/" + req.params.api,
             headers : req.headers,
             data: req.body
         }).then((response)=>{

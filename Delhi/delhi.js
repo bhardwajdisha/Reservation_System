@@ -17,7 +17,7 @@ const HOST = "localhost";
 
 const transporter = nodemailer.createTransport(sendgrid({
     auth:{
-        api_key:"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"
+        api_key:API_KEY
     }
 }))
 mongoose.connect('mongodb+srv://flights:9582533456@cluster0.n33by.mongodb.net/Reservations',{

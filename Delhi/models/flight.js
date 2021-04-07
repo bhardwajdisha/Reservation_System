@@ -9,6 +9,14 @@ const flightSchema = new mongoose.Schema({
         type:String,
         required:true,
     },
+    departure_airport: {
+        type:String,
+        required:true,
+    },
+    arrival_airport: {
+        type:String,
+        required:true,
+    },
     destination:{
         type:String,
         required:true,
@@ -25,10 +33,19 @@ const flightSchema = new mongoose.Schema({
         type:Number,
         required:true
     },
-    seats:{
+    totalSeats:{
         type:Number,
-        required: true
-    }
+        required:true
+    },
+    availableSeats: {
+        type:Number,
+        required:true
+    },
+    stops: {
+        type:Number,
+        required:true
+    },
+
 })
 
 module.exports = mongoose.model('Flights',flightSchema);

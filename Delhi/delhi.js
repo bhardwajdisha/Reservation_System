@@ -7,17 +7,20 @@ const passport = require('passport')
 const localStratergy = require('passport-local')
 const User = require('./models/users');
 const Flights = require('./models/flight')
+const Booking = require('./models/booking');
 const nodemailer = require('nodemailer')
 const sendgrid = require('nodemailer-sendgrid-transport');
 const crypto = require('crypto');
 const flash = require('connect-flash')
+var cookieParser = require('cookie-parser')
+const cors = require('cors')
 
 const PORT= 3003
 const HOST = "localhost";
 
 const transporter = nodemailer.createTransport(sendgrid({
     auth:{
-        api_key:"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"
+        api_key:"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"
     }
 }))
 mongoose.connect('mongodb+srv://flights:9582533456@cluster0.n33by.mongodb.net/Reservations',{
@@ -34,17 +37,25 @@ db.once('open', function() {
 mongoose.set('useFindAndModify', false);
 app.use(express.json())
 app.use(express.urlencoded({extended:true}));
+app.use(cors({
+    origin: 'http://localhost.org:8080',
+    credentials: true
+}));
 
 const sessionConfig ={
     secret:'secret',
     resave:false,
     saveUninitialized:true,
     cookie:{
-        httpOnly:true,
+        httpOnly:false,
         expires:Date.now() + 1000 * 60 * 60 * 24 * 7,
-        maxAge: 1000 * 60 * 60 * 24 * 7
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+        domain: undefined,
+        sameSite: false
     }
 }
+
+app.use(cookieParser())
 app.use(session(sessionConfig));
 app.use(flash());
 app.use(passport.initialize());
@@ -53,23 +64,92 @@ passport.use(new localStratergy(User.authenticate()))
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
-app.get('/test',(req,res)=>{
+app.get('/health-check',(req,res)=>{
     res.send("Okay working!")
 })
 
-app.get('/flight',async (req,res)=>{
-    const { source, destination} = req.query;
-    const flight = await Flights.find({source: source , destination: destination});
-    res.send(flight);
-})
-app.get('/flights/:id',async(req,res)=>{
-    const flight = await Flights.findById(req.params.id);
-    try{
-        res.send(flight);
-    }catch(e){
-        res.status(404).json('Not found');
+app.get('/flights',async (req,res)=>{
+    let { source, destination, startDate, returnDate} = req.query;
+
+    startDate = new Date(startDate);
+    startDate.setHours(0,0,0,0);
+    let startDateLimit = new Date(startDate);
+    startDateLimit.setDate(startDateLimit.getDate()+1);
+
+    const startFlights = await Flights.find({
+        source: source, 
+        destination: destination,
+        departure: {
+            $gte: startDate,
+            $lt: startDateLimit
+        }
+    });
+
+    let returnFlights = undefined;
+    if (returnDate) {
+        returnDate = new Date(returnDate);
+        returnDate.setHours(0,0,0,0);
+        let returnDateLimit = new Date(returnDate);
+        returnDateLimit.setDate(returnDateLimit.getDate()+1);
+
+        returnFlights = await Flights.find({
+            source: destination, 
+            destination: source,
+            departure: {
+                $gte: returnDate,
+                $lt: returnDateLimit
+            }
+        });
     }
-}) 
+    res.send({
+        startFlights,
+        returnFlights
+    });
+})
+
+app.get('/flight/:id',async(req,res)=>{
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'vendor')) {
+        const flight = await Flights.findById(req.params.id);
+        try{
+            res.send(flight);
+        }catch(e){
+            res.status(404).json('Not found');
+        }
+    } else {
+        res.status(401).send("You don't have neccessary permissions to access this endpoint");
+    }
+})
+
+app.post('/flight/add', async (req,res) => {
+    if (req.user && req.user.role === 'admin') {
+        console.log(req.user);
+        const data = req.body;
+        const newFlight = new Flights({
+            flightId: data.flightId,
+            source: data.source,
+            departure_airport: data.departure_airport,
+            arrival_airport: data.arrival_airport,
+            destination: data.destination,
+            price: data.price,
+            departure: new Date(data.departure),
+            arrival: new Date(data.arrival),
+            totalSeats: data.totalSeats,
+            availableSeats: data.totalSeats,
+            stops: data.stops,
+        });
+
+        newFlight.save((err) => {
+            if (err) {
+                console.log(err);
+                res.status(500).send('Could not add flight');
+            } else {
+                res.status(201).send('Flight created');
+            }
+        })
+    } else {
+        res.status(401).send("You don't have neccessary permissions to access this endpoint");
+    }
+});
 
 app.post('/login',passport.authenticate('local',({failureFlash:true,failureRedirect:'/login'})),async(req,res)=>{
     try{
@@ -83,15 +163,16 @@ app.get('/logout',(req,res)=>{
     req.logout();
     res.json(req.session);
 })
-app.post('/register',async(req,res)=>{
+
+app.post('/signup',async(req,res)=>{
     try{
-        const {email , username , password}=req.body;
-        const user = new User({email,username});
+        const {email , username , password, role}=req.body;
+        const user = new User({email,username, role});
         const newUser = await User.register(user,password);
         req.login(newUser, err=>{
             if(err)
                 return next(err);
-         res.json(newUser);
+         res.send("User created");
          })
     }catch(e){
         console.log(e.message);
@@ -151,6 +232,66 @@ app.post('/new-password',(req,res)=>{
         res.json(err)
     })
 })
+app.post('/reserve/:id',async(req,res)=>{
+    const data = req.body;
+    if(req.user)
+    {
+        const flight = await Flights.findById(req.params.id);
+        const user = await User.findById(req.user._id);
+        const ticket = new Booking ({})
+        const persons = data.persons;
+        ticket.person = [];
+        persons.forEach(person => {
+            ticket.person.push({
+                name: person.name,
+                phoneNo: person.phoneNo,
+            })
+        });
+        ticket.flight=flight;
+        ticket.user = user;
+        const query = {
+            _id: flight._id,
+        };
+        let availableSeats = flight.availableSeats;
+        availableSeats -=1;
+        const updateFlight = Flights.findOneAndUpdate(query, {availableSeats});
+        updateFlight
+        .then(() => {
+            ticket.save((err)=>{
+                if (err) {
+                    console.log(err);
+                    res.status(500).send('Sorry,Error occurred ! Reservation unsuccessfull');
+                } else {
+                    res.status(201).send('Succesfully booked your flight');
+                }
+            });
+        })
+        .catch((e) => {
+            res.status(500).send('Sorry,Error occurred ! Reservation unsuccessfull');
+        })
+    }else{
+        res.send("You need to login first")
+    }
+    
+})
+
+app.get('/userDetails', async (req,res) => {
+    if (req.user) {
+        let user = await User.findById(req.user._id);
+        const bookings = await Booking.find({ user: req.user._id }).populate('flight');
+
+        user = {
+            email: user.email,
+            username: user.username,
+        };
+
+        const response = {user, bookings};
+        res.send(response);
+    }else {
+        res.status(401).send("User not logged in");
+    }
+})
+
 app.listen(PORT,()=>{
     axios({
         method:'POST',
@@ -159,6 +300,7 @@ app.listen(PORT,()=>{
         data: {
             pathName :"Delhi",
             protocol:"http",
+            coordinates: [28.7041, 77.1025],
             host :HOST,
             port : PORT,
         }
@@ -170,5 +312,5 @@ app.listen(PORT,()=>{
     console.log(' Delhi server started on port 3003');
 })
 
-//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
+
 

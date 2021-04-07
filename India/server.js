@@ -8,6 +8,7 @@ const helmet = require('helmet');
 
 app.use(helmet());
 app.use(express.json());
+app.set('trust proxy',true);
 
 // app.get('/demoApi',(req,res)=>{
 //     res.send('Hiii from India');

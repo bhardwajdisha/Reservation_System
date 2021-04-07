@@ -31,23 +31,45 @@ A customer can view all the available flights. Customers can search the flight a
 ### Microservice Endpoint Details
 
 #### GET `/flights`
+- Get list of flights based on query params provided
+- Source, Destination, StartDate, ReturnDate are the params where Return date is optional and first three are required
+- Can be accessed by all users
 
 #### GET `/flight/:id`
+- Get details regarding a single flight
+- Can be accessed by admin user and registered vendor for third party access
 
 #### POST `/flight/add`
+- Add new flights to the database
+- Can be accessed only by admin user
 
 #### POST `/login`
+- This endpoint is used for login
+- Cookies are set for session management
+- Can be accessed by all users
 
 #### POST `/signup`
+- Create new user
+- Can be accessed by all users
 
 #### GET `/logout`
+- Used for logging users out and destroying session
 
 #### POST `/reset-password`
+- Used for initiating password
+- Generates a password reset token  with expiry date
 
 #### POST `/new-password`
+- Used for password reset
+- Requires valid reset password token to reset
 
 #### POST `/reserve/:id`
+- Used for booking flights
+- A person can book flight for more than one traveller at once
+- Can be used by all type of users
 
 #### GET `/userDetails`
+- Returns details of logged in user
+- Automatically determines logged in user using session  cookies
 
 ### Architecture Diagram

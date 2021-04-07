@@ -81,7 +81,7 @@ function formatDate(date) {
 
 function bookflight(flightId, type) {
     var allFlights = type === 'startFlight' ? startFlights : returnFlights;
-    selectedFlight = allFlights.find(x => x.flightId = flightId);
+    selectedFlight = allFlights.find(x => x.flightId === flightId);
     $('#myModal').modal('show');
 }
 

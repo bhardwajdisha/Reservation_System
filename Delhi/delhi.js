@@ -253,7 +253,7 @@ app.post('/reserve/:id',async(req,res)=>{
             _id: flight._id,
         };
         let availableSeats = flight.availableSeats;
-        availableSeats -=1;
+        availableSeats -= persons.length;
         const updateFlight = Flights.findOneAndUpdate(query, {availableSeats});
         updateFlight
         .then(() => {

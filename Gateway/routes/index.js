@@ -45,12 +45,10 @@ router.post('/unregister',(req,res)=>{
 router.all('/:apiName/*',(req,res)=>{
 
     const service = registry.services[req.params.apiName]
-
     if(service)
     {
         const url = service.instance.url;
         console.log(`Request is forwarded to server ${service.instance.apiName}`);
-
         let requestPath =  req.originalUrl;
         requestPath = requestPath.split('/'+ req.params.apiName).pop();
 

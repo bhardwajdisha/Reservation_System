@@ -20,7 +20,7 @@ const HOST = "localhost";
 
 const transporter = nodemailer.createTransport(sendgrid({
     auth:{
-        api_key:'API_KEY'
+        api_key:'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'
     }
 }))
 mongoose.connect('mongodb+srv://flights:9582533456@cluster0.n33by.mongodb.net/Reservations',{
@@ -122,7 +122,6 @@ app.get('/flight/:id',async(req,res)=>{
 
 app.post('/flight/add', async (req,res) => {
     if (req.user && req.user.role === 'admin') {
-        console.log(req.user);
         const data = req.body;
         const newFlight = new Flights({
             flightId: data.flightId,
@@ -185,16 +184,19 @@ app.post('/reset-password',async(req,res)=>{
             console.log(err)
         }
         const token = buffer.toString('hex')
+        console.log(token)
         await User.findOne({email:req.body.email}).then(user=>{
             if(!user){ 
                 return res.status(422).json({error:"User doesn't exist.Verify the given email address"});
             }
             user.resetToken = token;
             console.log(token);
+            console.log(user);
             user.expireToken = Date.now() + 3600000
             user.save().then(result=>{
                 transporter.sendMail({
-                    to: user.email,
+                    to: 'oholivia876@gmail.com',
+                    //to: user.email,
                     from: 'oholivia876@gmail.com', 
                     subject: 'Reset password',
                     html: `
@@ -210,7 +212,6 @@ app.post('/reset-password',async(req,res)=>{
             })
             res.json({message:"Check your email"})
         })
-
     })
 })
 

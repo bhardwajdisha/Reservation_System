@@ -23,6 +23,17 @@
         "host": "localhost",
         "port": 3004,
         "url": "http://localhost:3004"
+      },
+      {
+        "pathName": "Mumbai",
+        "protocol": "http",
+        "coordinates": [
+          19.0760,
+          72.8777
+        ],
+        "host": "localhost",
+        "port": 3003,
+        "url": "http://localhost:3003"
       }
     ]
   }
